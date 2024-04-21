@@ -16,14 +16,18 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
 
-    links = []
-    soup = BeautifulSoup(resp.content, 'html5lib')
-    for s in soup(["script", "style"]):
-        s.extract()
-    # text = soup.get_text()
-    # print(text)
-    for link in soup.find_all('a'):
-        links.append(link.get('href'))
+   links = []
+    if resp.status_code == 200:
+        soup = BeautifulSoup(resp.content, 'html.parser')
+        for s in soup(["script", "style"]):
+            s.extract()
+        # text = soup.get_text()
+        # print(text)
+        temp = ""
+        for link in soup.find_all('a'):
+            temp = link.get('href')
+            if is_valid(temp):
+                links.append(link.get('href'))
     return links
 
 def is_valid(url):
