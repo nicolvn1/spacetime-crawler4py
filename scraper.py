@@ -16,7 +16,7 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
 
-   links = []
+    links = []
     if resp.status_code == 200:
         soup = BeautifulSoup(resp.content, 'html.parser')
         for s in soup(["script", "style"]):
