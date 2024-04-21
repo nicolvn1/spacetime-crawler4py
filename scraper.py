@@ -1,5 +1,7 @@
 import re
 from urllib.parse import urlparse
+from bs4 import BeautifulSoup
+from utils import response
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -17,8 +19,8 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
 
     links = []
-    if resp.status_code == 200:
-        soup = BeautifulSoup(resp.content, 'html.parser')
+    if resp.status == 200:
+        soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
         for s in soup(["script", "style"]):
             s.extract()
         # text = soup.get_text()
@@ -52,4 +54,4 @@ def is_valid(url):
 
     except TypeError:
         print ("TypeError for ", parsed)
-        raise
+        raise    
