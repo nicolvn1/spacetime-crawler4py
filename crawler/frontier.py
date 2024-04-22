@@ -45,14 +45,16 @@ class Frontier(object):
         
         total_count = len(self.save)
         tbd_count = 0
-        unique = set()
+        unique_pages = set()
         max_len = 0
         max_url = ""
         freq = {}
         for url, completed in self.save.values():
             if completed and is_valid(url):
-                
+                #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
+                unique_pages.add(url.split("#")[0])
                 page = requests.get(url)
+                
                 soup = BeautifulSoup(page.content, 'html.parser')
                 for s in soup(["script", "style"]):
                     s.extract()
@@ -108,7 +110,7 @@ class Frontier(object):
         
         self.logger.info(
             f"Found {tbd_count} urls to be downloaded from {total_count} "
-            f"total urls discovered. "
+            f"{len(unique_pages)} total urls discovered. "
             f"Page {max_url} has {max_len} words. "
             f"Top 50 most common words: {result[0:50]}")
 
