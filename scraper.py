@@ -26,8 +26,11 @@ def extract_next_links(url, resp):
         temp = ""
         for link in soup.find_all('a'):
             temp = link.get('href')
+            #checks if url is absolute or relative. Transforms relative urls to absolute before adding to list.
+            if urlparse(temp).netloc == "": 
+                temp = urljoin(resp.url, temp)
             if is_valid(temp):
-                links.append(link.get('href'))
+                links.append(temp)
     return links
 
 def is_valid(url):
