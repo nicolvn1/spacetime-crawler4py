@@ -75,38 +75,7 @@ class Frontier(object):
                 self.to_be_downloaded.append(url)
                 tbd_count += 1
                 
-        result = []
-        maxVal = 0
-        maxIndex = 0
-
-        # Iterate through the dictionary and add the pairs to a list
-        for key, value in freq.items():
-            result.append([key, value])
-
-        # Iterate by index through the list
-        for i in range(len(result)):
-            # Have the max value be the starting value
-            maxVal = result[i][1]
-            maxIndex = i
-
-            # Iterate by index from the starting i value to the end of the list
-            for j in range(i, len(result)):
-                # If the values are the same, order them alphabetically
-                if result[j][1] == maxVal:
-                    if result[j][0] < result[maxIndex][0]:
-                        maxVal = result[j][1]
-                        maxIndex = j
-
-                # If the new value is larger than the current max,
-                # replace the max value and keep track of its index
-                elif result[j][1] > maxVal:
-                    maxVal = result[j][1]
-                    maxIndex = j
-
-            # Swap the starting index value with the max value
-            temp = result[i]
-            result[i] = result[maxIndex]
-            result[maxIndex] = temp
+        result = sorted(frequenciesDict.keys(), key=lambda x:(-x[1],x[0]))
         
         self.logger.info(
             f"Found {tbd_count} urls to be downloaded from {total_count} "
