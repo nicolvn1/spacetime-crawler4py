@@ -49,6 +49,7 @@ class Frontier(object):
         max_len = 0
         max_url = ""
         freq = {}
+        ics_subdomains = {}
         for url, completed in self.save.values():
             if completed and is_valid(url):
                 #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
@@ -80,6 +81,14 @@ class Frontier(object):
                 
         result = sorted(freq.items(), key=lambda x:(-1*x[1],x[0]))
         
+        for link in unique_pages:
+            if ".ics.uci.edu" in link:
+                subdomain = link.split(".ics.uci.edu")[0] + ".ics.uci.edu"
+                if subdomain not in ics_subdomains:
+                    ics_subdomains[subdomain] = 0
+                else:
+                    ics_subdomains[subdomain] += 1
+
         self.logger.info(
             f"Found {tbd_count} urls to be downloaded from {total_count} "
             f"{len(unique_pages)} total urls discovered. "
