@@ -53,34 +53,37 @@ class Frontier(object):
             if completed and is_valid(url):
                 #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
                 unique_pages.add(url.split("#")[0])
-                page = requests.get(url)
-                
-                soup = BeautifulSoup(page.content, 'html.parser')
-                for s in soup(["script", "style"]):
-                    s.extract()
-                words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
-                if max_len < len(words):
-                    max_len = len(words)
-                    max_url = url
-                    
-                for k in words:
-                    k = k.lower()
-                    if len(k) > 1 and k not in stopwords:
-                        if k not in freq:
-                            freq[k] = 1
-                        else:
-                            freq[k] += 1
+
+                try:
+                    page = requests.get(url, timeout = 5)
+                    soup = BeautifulSoup(page.content, 'html.parser')
+                    for s in soup(["script", "style"]):
+                        s.extract()
+                    words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
+                    if max_len < len(words):
+                        max_len = len(words)
+                        max_url = url
+
+                    for k in words:
+                        k = k.lower()
+                        if len(k) > 1 and k not in stopwords:
+                            if k not in freq:
+                                freq[k] = 1
+                            else:
+                                freq[k] += 1
+                except requests.exceptions.ConnectTimeout:
+                    continue
                 
             if not completed and is_valid(url):
                 self.to_be_downloaded.append(url)
                 tbd_count += 1
                 
-        result = sorted(frequenciesDict.keys(), key=lambda x:(-x[1],x[0]))
+        result = sorted(freq.items(), key=lambda x:(-1*x[1],x[0]))
         
         self.logger.info(
             f"Found {tbd_count} urls to be downloaded from {total_count} "
             f"{len(unique_pages)} total urls discovered. "
-            f"Page {max_url} has {max_len} words. "
+            f"The longest page {max_url} has {max_len} words. "
             f"Top 50 most common words: {result[0:50]}")
 
     def get_tbd_url(self):
