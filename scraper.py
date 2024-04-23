@@ -45,7 +45,7 @@ def pos_trap(url):
                 freq[k] = 1
             else:
                 freq[k] += 1
-                if freq[k] > 3:
+                if freq[k] > 2:
                     return True
     return False
 
