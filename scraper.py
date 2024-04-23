@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 from utils import response
+from dateutil.parser import parse
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -38,11 +39,14 @@ def pos_trap(url):
     link = urlparse(url)
     path = link.path
     path_list = path.split("/")
-    path_list.pop()
-    path_list.pop(0)
-    path_list[-1] = path_list[-1].split(".")[0] # just in case last one ends in .html or something
-    if len(path_list) > 3 and path_list[-1] == path_list[-2] and path_list[-2] == path_list[-3]:
-        return True
+    try:
+        path_list.pop()
+        path_list.pop(0)
+        path_list[-1] = path_list[-1].split(".")[0] # just in case last one ends in .html or something
+        if len(path_list) > 3 and path_list[-1] == path_list[-2] and path_list[-2] == path_list[-3]:
+            return True
+    except IndexError:
+        pass
     return False
 
 def pos_calendar(url):
@@ -50,14 +54,18 @@ def pos_calendar(url):
     link = urlparse(url)
     queries = link.query.split("&")
     path_list = link.path.split("/")
-    path_list.pop()
-    path_list.pop(0)
-    path_list[-1] = path_list[-1].split(".")[0] # just in case last one ends in .html or something
+    try:
+        path_list.pop()
+        path_list.pop(0)
+        if path_list != []:
+            path_list[-1] = path_list[-1].split(".")[0] # just in case last one ends in .html or something
+    except IndexError:
+        pass
     # for every query, check if it has date format in the query = 
     for query in queries:
         filtered = query.split("=")[-1]
         # thank you stackoverflow for the date checking piece of code 
-        try: 
+        try:
             parse(filtered, fuzzy=False)
             return True
         except ValueError:
