@@ -33,6 +33,17 @@ def extract_next_links(url, resp):
                 links.append(temp.split("#")[0])
     return links
 
+def pos_trap(url):
+    # detect possible trap by checking if the last 3 path sections are duplicates (not counting the last one)
+    link = urlparse(url)
+    path = link.path
+    path_list = path.split("/")
+    path_list.pop()
+    if len(path_list) > 3 and path_list[-1] == path_list[-2] and path_list[-2] == path_list[-3]:
+        return True
+    return False
+
+
 def is_valid(url):
     # Decide whether to crawl this url or not. 
     # If you decide to crawl it, return True; otherwise return False.
