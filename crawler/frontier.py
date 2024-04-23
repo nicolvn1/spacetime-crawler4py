@@ -102,7 +102,7 @@ class Frontier(object):
                 else:
                     ics_subdomains[subdomain] += 1
 
-        for subdomain in sorted(freq.keys()):
+        for subdomain in sorted(ics_subdomains.keys()):
             ics_subdomains_formatted.append(f"{subdomain}, {ics_subdomains[subdomain]}")
 
         self.logger.info(
