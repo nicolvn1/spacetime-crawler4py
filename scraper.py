@@ -18,18 +18,24 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-
+    
+    # Initialize empty list to keep track of links
     links = []
+    # Only look at the link if the status is 200
     if resp.status == 200:
+        # Get the content from the response
         soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+        # Extract the script and style elements of the page
         for s in soup(["script", "style"]):
             s.extract()
         temp = ""
+        # Get the links
         for link in soup.find_all('a'):
             temp = link.get('href')
             #checks if url is absolute or relative. Transforms relative urls to absolute before adding to list.
             if urlparse(temp).netloc == "": 
                 temp = urljoin(resp.url, temp)
+            # Add a link without the fragment to the list of links
             if is_valid(temp) and not pos_trap(temp) and not pos_calendar(temp):
                 links.append(temp.split("#")[0])
     return links
