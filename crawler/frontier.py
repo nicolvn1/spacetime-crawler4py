@@ -50,6 +50,7 @@ class Frontier(object):
         max_url = ""
         freq = {}
         ics_subdomains = {}
+        ics_subdomains_formatted = []
         for url, completed in self.save.values():
             if completed and is_valid(url):
                 #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
@@ -91,7 +92,7 @@ class Frontier(object):
                 tbd_count += 1
 
         # Sort the items in the dictionary of frequencies by descending order
-        result = sorted(freq.items(), key=lambda x:(-1*x[1],x[0]))
+        result = sorted(freq.items(), key=lambda x:(-x[1],x[0]))
         
         for link in unique_pages:
             if ".ics.uci.edu" in link:
@@ -101,11 +102,15 @@ class Frontier(object):
                 else:
                     ics_subdomains[subdomain] += 1
 
+        for subdomain in sorted(freq.keys()):
+            ics_subdomains_formatted.append(f"{subdomain}, {ics_subdomains[subdomain]}")
+
         self.logger.info(
             f"Found {tbd_count} urls to be downloaded from {total_count} "
             f"{len(unique_pages)} total unique urls discovered. "
             f"The longest page {max_url} has {max_len} words. "
-            f"Top 50 most common words: {result[0:50]}")
+            f"Top 50 most common words: {result[0:50]}"
+            f"All ics.uci.edu subdomains: {ics_subdomains_formatted}")
 
     def get_tbd_url(self):
         try:
