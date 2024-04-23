@@ -30,7 +30,7 @@ def extract_next_links(url, resp):
             if urlparse(temp).netloc == "": 
                 temp = urljoin(resp.url, temp)
             if is_valid(temp):
-                links.append(temp)
+                links.append(temp.split("#")[0])
     return links
 
 def is_valid(url):
