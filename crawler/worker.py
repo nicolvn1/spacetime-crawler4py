@@ -38,8 +38,6 @@ class Worker(Thread):
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
             
-            
-            #########
             #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
             unique_pages.add(tbd_url.split("#")[0])
 
@@ -66,28 +64,26 @@ class Worker(Thread):
                             freq[k] = 1
                         else:
                             freq[k] += 1
-
-            # Sort the items in the dictionary of frequencies by descending order
-            result = sorted(freq.items(), key=lambda x:(-x[1],x[0]))
-
-            for link in unique_pages:
-                if ".ics.uci.edu" in link:
-                    subdomain = link.split(".ics.uci.edu")[0] + ".ics.uci.edu"
-                    if subdomain not in ics_subdomains:
-                        ics_subdomains[subdomain] = 0
-                    else:
-                        ics_subdomains[subdomain] += 1
-
-            for subdomain in sorted(ics_subdomains.keys()):
-                ics_subdomains_formatted.append(f"{subdomain}, {ics_subdomains[subdomain]}")
-            #########
-            
             
             scraped_urls = scraper.scraper(tbd_url, resp)
             for scraped_url in scraped_urls:
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
+
+        # Sort the items in the dictionary of frequencies by descending order
+        result = sorted(freq.items(), key=lambda x:(-x[1],x[0]))
+
+        for link in unique_pages:
+            if ".ics.uci.edu" in link:
+                subdomain = link.split(".ics.uci.edu")[0] + ".ics.uci.edu"
+                if subdomain not in ics_subdomains:
+                    ics_subdomains[subdomain] = 0
+                else:
+                    ics_subdomains[subdomain] += 1
+
+        for subdomain in sorted(ics_subdomains.keys()):
+            ics_subdomains_formatted.append(f"{subdomain}, {ics_subdomains[subdomain]}")
             
         self.logger.info(
             f"{len(unique_pages)} total unique urls discovered. "
