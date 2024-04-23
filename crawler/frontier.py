@@ -137,7 +137,7 @@ class Frontier(object):
         self.save.sync()
 
 
-def genearteSimHash(words):
+def generateSimHash(words):
     # compute weights
     tkFreq = {}
     for word in words:
@@ -148,9 +148,9 @@ def genearteSimHash(words):
     binNum = math.ceil(math.log2(len(tkFreq.keys())))
     simHash = [0 for i in range(binNum)]
     # randomly assign binary and generate sum
-    for word in tk.Freq.keys():
+    for word in tkFreq.keys():
         biRep = format(random.getrandbits(binNum), '0b')
-        biRep = '0' * binNum - len(biRep)  + biRep
+        biRep = '0' * (binNum - len(biRep))  + biRep
         for i in range(binNum):
             if biRep[i] == '0':
                 simHash[i] -= tkFreq[word]
