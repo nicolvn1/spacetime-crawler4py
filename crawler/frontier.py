@@ -55,23 +55,24 @@ class Frontier(object):
                 unique_pages.add(url.split("#")[0])
 
                 try:
-                    page = requests.get(url, timeout = 5)
-                    soup = BeautifulSoup(page.content, 'html.parser')
-                    for s in soup(["script", "style"]):
-                        s.extract()
-                    words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
-                    if max_len < len(words):
-                        max_len = len(words)
-                        max_url = url
-
-                    for k in words:
-                        k = k.lower()
-                        if len(k) > 1 and k not in stopwords:
-                            if k not in freq:
-                                freq[k] = 1
-                            else:
-                                freq[k] += 1
-                except requests.exceptions.ConnectTimeout:
+                    page = requests.get(url, timeout = 0.5)
+                    if page.status_code == 200:
+                        soup = BeautifulSoup(page.content, 'html.parser')
+                        for s in soup(["script", "style"]):
+                            s.extract()
+                        words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
+                        if max_len < len(words):
+                            max_len = len(words)
+                            max_url = url
+    
+                        for k in words:
+                            k = k.lower()
+                            if len(k) > 1 and k not in stopwords:
+                                if k not in freq:
+                                    freq[k] = 1
+                                else:
+                                    freq[k] += 1
+                except requests.exceptions.RequestException:
                     continue
                 
             if not completed and is_valid(url):
@@ -82,7 +83,7 @@ class Frontier(object):
         
         self.logger.info(
             f"Found {tbd_count} urls to be downloaded from {total_count} "
-            f"{len(unique_pages)} total urls discovered. "
+            f"{len(unique_pages)} total unique urls discovered. "
             f"The longest page {max_url} has {max_len} words. "
             f"Top 50 most common words: {result[0:50]}")
 
