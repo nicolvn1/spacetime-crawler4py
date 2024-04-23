@@ -39,14 +39,14 @@ def pos_trap(url):
     link = urlparse(url)
     path = link.path
     path_list = path.split("/")
-    try:
-        path_list.pop()
-        path_list.pop(0)
-        path_list[-1] = path_list[-1].split(".")[0] # just in case last one ends in .html or something
-        if len(path_list) > 3 and path_list[-1] == path_list[-2] and path_list[-2] == path_list[-3]:
-            return True
-    except IndexError:
-        pass
+    for k in path_list:
+        if len(k) > 1:
+            if k not in freq:
+                freq[k] = 1
+            else:
+                freq[k] += 1
+                if freq[k] > 3:
+                    return True
     return False
 
 def pos_calendar(url):
