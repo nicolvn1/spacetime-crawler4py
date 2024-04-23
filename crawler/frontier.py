@@ -7,10 +7,6 @@ from queue import Queue, Empty
 from utils import get_logger, get_urlhash, normalize
 from scraper import is_valid
 
-import re
-import requests
-from bs4 import BeautifulSoup
-
 class Frontier(object):
     def __init__(self, config, restart):
         self.logger = get_logger("FRONTIER")
