@@ -135,3 +135,46 @@ class Frontier(object):
 
         self.save[urlhash] = (url, True)
         self.save.sync()
+
+
+def genearteSimHash(words):
+    # compute weights
+    tkFreq = {}
+    for word in words:
+        if word in tkFreq.keys():
+            tkFreq[word] += 1
+        else:
+            tkFreq[word] = 1
+    binNum = math.ceil(math.log2(len(tkFreq.keys())))
+    simHash = [0 for i in range(binNum)]
+    # randomly assign binary and generate sum
+    for word in tk.Freq.keys():
+        biRep = format(random.getrandbits(binNum), '0b')
+        biRep = '0' * binNum - len(biRep)  + biRep
+        for i in range(binNum):
+            if biRep[i] == '0':
+                simHash[i] -= tkFreq[word]
+            else:
+                simHash[i] += tkFreq[word]
+    # return as binary of binNum
+    return "".join(["1" if x >= 0 else "0" for x in simHash])
+
+
+def compareBySimHash(words1, words2):
+    # get sim hash for words
+    simHash1 = genearteSimHash(words1)
+    simHash2 = generateSimHash(words2)
+    # compare the smaller number of bits of 2
+    if len(simHash1) >= len(simHash2):
+        n = len(simHash1)
+        smaller = len(simHash2)
+    else:
+        n = len(simHash2)
+        smaller = len(simHash1)
+    counter = 0
+    for i in range(smaller):
+        if simHash1[i] != simHash2[i]:
+            counter += 1
+    # add on the difference of n
+    counter += n-smaller
+    return counter/n
