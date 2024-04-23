@@ -36,6 +36,7 @@ def extract_next_links(url, resp):
 
 def pos_trap(url):
     # detect possible trap by checking if the last 3 path sections are duplicates
+    freq = {}
     link = urlparse(url)
     path = link.path
     path_list = path.split("/")
