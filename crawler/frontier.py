@@ -55,30 +55,42 @@ class Frontier(object):
                 #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
                 unique_pages.add(url.split("#")[0])
 
+                # Try to request url while being polite
                 try:
-                    page = requests.get(url, timeout = 5)
-                    soup = BeautifulSoup(page.content, 'html.parser')
-                    for s in soup(["script", "style"]):
-                        s.extract()
-                    words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
-                    if max_len < len(words):
-                        max_len = len(words)
-                        max_url = url
+                    page = requests.get(url, timeout = 0.5)
+                    # Check if the status is 200
+                    if page.status_code == 200:
+                        # Get the content of the url
+                        soup = BeautifulSoup(page.content, 'html.parser')
+                        # Remove the script and style elements of the page
+                        for s in soup(["script", "style"]):
+                            s.extract()
+                        
+                        # Create a list of words composed of alphanumeric characters and apostrophes
+                        words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
+                        # Find the page that has the most number of words
+                        if max_len < len(words):
+                            max_len = len(words)
+                            max_url = url
 
-                    for k in words:
-                        k = k.lower()
-                        if len(k) > 1 and k not in stopwords:
-                            if k not in freq:
-                                freq[k] = 1
-                            else:
-                                freq[k] += 1
-                except requests.exceptions.ConnectTimeout:
+                        # Create a dictionary with a word as a key and its frequency as the value
+                        for k in words:
+                            k = k.lower()
+                            if len(k) > 1 and k not in stopwords:
+                                if k not in freq:
+                                    freq[k] = 1
+                                else:
+                                    freq[k] += 1
+
+                # Account for request errors such as time and connection errors
+                except requests.exceptions.RequestException:
                     continue
                 
             if not completed and is_valid(url):
                 self.to_be_downloaded.append(url)
                 tbd_count += 1
-                
+
+        # Sort the items in the dictionary of frequencies by descending order
         result = sorted(freq.items(), key=lambda x:(-1*x[1],x[0]))
         
         for link in unique_pages:
@@ -91,7 +103,7 @@ class Frontier(object):
 
         self.logger.info(
             f"Found {tbd_count} urls to be downloaded from {total_count} "
-            f"{len(unique_pages)} total urls discovered. "
+            f"{len(unique_pages)} total unique urls discovered. "
             f"The longest page {max_url} has {max_len} words. "
             f"Top 50 most common words: {result[0:50]}")
 
