@@ -21,7 +21,7 @@ def extract_next_links(url, resp):
 
     links = []
     if resp.status == 200:
-        soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+        soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
         for s in soup(["script", "style"]):
             s.extract()
         temp = ""
