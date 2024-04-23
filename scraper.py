@@ -29,20 +29,47 @@ def extract_next_links(url, resp):
             #checks if url is absolute or relative. Transforms relative urls to absolute before adding to list.
             if urlparse(temp).netloc == "": 
                 temp = urljoin(resp.url, temp)
-            if is_valid(temp):
+            if is_valid(temp) and not pos_trap(temp) and not pos_calendar(temp):
                 links.append(temp.split("#")[0])
     return links
 
 def pos_trap(url):
-    # detect possible trap by checking if the last 3 path sections are duplicates (not counting the last one)
+    # detect possible trap by checking if the last 3 path sections are duplicates
     link = urlparse(url)
     path = link.path
     path_list = path.split("/")
     path_list.pop()
+    path_list.pop(0)
+    path_list[-1] = path_list[-1].split(".")[0] # just in case last one ends in .html or something
     if len(path_list) > 3 and path_list[-1] == path_list[-2] and path_list[-2] == path_list[-3]:
         return True
     return False
 
+def pos_calendar(url):
+    # detect possible trap by checking if query or path has a calendar date
+    link = urlparse(url)
+    queries = link.query.split("&")
+    path_list = link.path.split("/")
+    path_list.pop()
+    path_list.pop(0)
+    path_list[-1] = path_list[-1].split(".")[0] # just in case last one ends in .html or something
+    # for every query, check if it has date format in the query = 
+    for query in queries:
+        filtered = query.split("=")[-1]
+        # thank you stackoverflow for the date checking piece of code 
+        try: 
+            parse(filtered, fuzzy=False)
+            return True
+        except ValueError:
+            continue
+    # for every section in path, check if path is in date format
+    for path in path_list:
+        try: 
+            parse(path, fuzzy=False)
+            return True
+        except ValueError:
+            continue
+    return False
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
