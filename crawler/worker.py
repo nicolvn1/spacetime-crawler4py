@@ -33,6 +33,26 @@ class Worker(Thread):
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
                 break
+            # request header only - FOR REDIRECT
+            head = download_header(tbd_url, self.config, self.logger)
+            # while status is 300~ redirect and has a redirect link
+            while str(head).startswith("<Response [3"): 
+                if "Location" in head.headers:
+                    redir = head.headers["Location"]
+                    # if relative
+                    if urlparse(redir).netloc == "": 
+                        tbd_url = urljoin(head.url, redir)
+                    else:
+                        tbd_url = redir
+                elif "Refresh" in head.headers:
+                    redir = head.header["Refresh"]
+                    # if relative
+                    if urlparse(redir).netloc == "": 
+                        tbd_url = urljoin(head.url, redir)
+                    else:
+                        tbd_url = redir
+                else:
+                    break   
             resp = download(tbd_url, self.config, self.logger)
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
