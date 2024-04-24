@@ -1,13 +1,14 @@
 from threading import Thread
 
 from inspect import getsource
-from utils.download import download
+from utils.download import download, download_header
 from utils import get_logger
 import scraper
 import time
 
 from bs4 import BeautifulSoup
 import re
+import requests
 
 class Worker(Thread):
     def __init__(self, worker_id, config, frontier):
@@ -62,16 +63,35 @@ class Worker(Thread):
             unique_pages.add(tbd_url.split("#")[0])
 
             # Check if the status is 200
+            size = 1048576 #initalized file size as 1 mb so file is not crawled in case status is not 200
+            headers = download_header(tbd_url, self.config, self.logger).headers
             if resp.status == 200:
+                #detect and avoid crawling if file size is above threshold
+                if resp.raw_response is not None:
+                    if 'Content-Length' in headers:
+                        size = int(headers['Content-Length'])
+                    #if content length header not present, download max size and check if size is greater than threshold.
+                    #if not, proceed. if so, size stays 1mb (as initialized) so file is not crawled.
+                    else:
+                        response = requests.get(tbd_url, stream = True)
+                        totalSize = 0
+                        with open('tempTestFile', 'wb') as f:
+                            for chunk in response.iter_content(chunk_size=1024):
+                                if chunk:
+                                    f.write(chunk)
+                                    totalSize += len(chunk)
+                                    if totalSize > 1048576:
+                                        break
+                                        
                 # Get the content of the url
                 soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
                 # after downlading, if we need to redirect, add redirect to frontier and move on
-                pos_redirect = self.checkRedirect(soup)
+                '''pos_redirect = self.checkRedirect(soup)
                 if pos_redirect is not None:
                     self.frontier.add_url(pos_redirect)
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
-                    continue
+                    continue'''
                 # does not crawl if website is titled 403 forbidden 
                 # eg https://swiki.ics.uci.edu/doku.php/projects:maint-spring-2021?tab_files=files&do=media&tab_details=view&image=virtual_environments%3Ajupyterhub%3Ajupyter-troubleshooting-1.png&ns=group%3Asupport%3Aservices,
                 if soup.find('title').string == "403 Forbidden":
@@ -97,10 +117,11 @@ class Worker(Thread):
                             freq[k] = 1
                         else:
                             freq[k] += 1
-            
-                scraped_urls = scraper.scraper(tbd_url, resp)
-                for scraped_url in scraped_urls:
-                    self.frontier.add_url(scraped_url)
+                #if file size is below 1mb, crawl. otherwise, avoid.
+                if size < 1048576:
+                    scraped_urls = scraper.scraper(tbd_url, resp)
+                    for scraped_url in scraped_urls:
+                        self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
 
