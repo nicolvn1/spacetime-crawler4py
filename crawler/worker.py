@@ -65,6 +65,12 @@ class Worker(Thread):
             if resp.status == 200:
                 # Get the content of the url
                 soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+                # does not crawl if website is titled 403 forbidden 
+                # eg https://swiki.ics.uci.edu/doku.php/projects:maint-spring-2021?tab_files=files&do=media&tab_details=view&image=virtual_environments%3Ajupyterhub%3Ajupyter-troubleshooting-1.png&ns=group%3Asupport%3Aservices,
+                if soup.find('title').string == "403 Forbidden":
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    continue
                 # Remove the script and style elements of the page
                 for s in soup(["script", "style"]):
                     s.extract()
@@ -85,9 +91,9 @@ class Worker(Thread):
                         else:
                             freq[k] += 1
             
-            scraped_urls = scraper.scraper(tbd_url, resp)
-            for scraped_url in scraped_urls:
-                self.frontier.add_url(scraped_url)
+                scraped_urls = scraper.scraper(tbd_url, resp)
+                for scraped_url in scraped_urls:
+                    self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
 
