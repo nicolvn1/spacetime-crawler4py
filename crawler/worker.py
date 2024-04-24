@@ -65,6 +65,13 @@ class Worker(Thread):
             if resp.status == 200:
                 # Get the content of the url
                 soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+                # after downlading, if we need to redirect, add redirect to frontier and move on
+                pos_redirect = self.checkRedirect(soup)
+                if pos_redirect is not None:
+                    self.frontier.add_url(pos_redirect)
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    continue
                 # does not crawl if website is titled 403 forbidden 
                 # eg https://swiki.ics.uci.edu/doku.php/projects:maint-spring-2021?tab_files=files&do=media&tab_details=view&image=virtual_environments%3Ajupyterhub%3Ajupyter-troubleshooting-1.png&ns=group%3Asupport%3Aservices,
                 if soup.find('title').string == "403 Forbidden":
