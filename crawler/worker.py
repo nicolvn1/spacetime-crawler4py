@@ -36,11 +36,11 @@ class Worker(Thread):
                 break
                 
             # REQUEST HEAD FOR REDIRECT AND FILE SIZE
-            head = download_header(url, self.config, self.logger)
+            head = download_header(tbd_url, self.config, self.logger)
             # find redirect as long as returned is different
             redirect = self.headerRedirect(tbd_url, head)
             while redirect != tbd_url:
-                head = download_header(url, self.config, self.logger)
+                head = download_header(tbd_url, self.config, self.logger)
                 redirect = self.headerRedirect(tbd_url, head)
             # check if reported length is too big, if so, skip file
             if "Content-Length" in head.headers and int(head.headers["Content-Length"]) > 1048576:
@@ -64,8 +64,8 @@ class Worker(Thread):
                 if resp.raw_response is not None:
                     # Hello I added a thing more ealier that does the same thing cuz I needed to use HEAD
                     # Maybe we can move this?
-                    if 'Content-Length' in headers:
-                        size = int(headers['Content-Length'])
+                    if 'Content-Length' in head.headers:
+                        size = int(head.headers['Content-Length'])
                     #if content length header not present, download max size and check if size is greater than threshold.
                     #if not, proceed. if so, break so file is not crawled.
                     else:
