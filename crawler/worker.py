@@ -56,9 +56,9 @@ class Worker(Thread):
             #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
             unique_pages.add(tbd_url.split("#")[0])
 
-            # Check if the status is 200
             size = 1048576 #initalized file size as 1 mb so file is not crawled in case status is not 200
             # headers = download_header(tbd_url, self.config, self.logger).headers ALREADY DOWNLOADED
+            # Check if the status is 200
             if resp.status == 200:
                 #detect and avoid crawling if file size is above threshold
                 if resp.raw_response is not None:
@@ -125,7 +125,8 @@ class Worker(Thread):
 
         # Sort the items in the dictionary of frequencies by descending order
         result = sorted(freq.items(), key=lambda x:(-x[1],x[0]))
-
+        
+        # Check the subdomains
         for link in unique_pages:
             if ".ics.uci.edu" in link:
                 subdomain = link.split(".ics.uci.edu")[0] + ".ics.uci.edu"
