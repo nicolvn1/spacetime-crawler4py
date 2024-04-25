@@ -71,16 +71,16 @@ class Worker(Thread):
                     if 'Content-Length' in headers:
                         size = int(headers['Content-Length'])
                     #if content length header not present, download max size and check if size is greater than threshold.
-                    #if not, proceed. if so, size stays 1mb (as initialized) so file is not crawled.
+                    #if not, proceed. if so, break so file is not crawled.
                     else:
                         response = requests.get(tbd_url, stream = True)
-                        totalSize = 0
+                        size = 0
                         with open('tempTestFile', 'wb') as f:
                             for chunk in response.iter_content(chunk_size=1024):
                                 if chunk:
                                     f.write(chunk)
-                                    totalSize += len(chunk)
-                                    if totalSize > 1048576:
+                                    size += len(chunk)
+                                    if size > 1048576:
                                         break
                                         
                 # Get the content of the url
