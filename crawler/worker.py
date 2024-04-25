@@ -34,26 +34,20 @@ class Worker(Thread):
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
                 break
-            # request header only - FOR REDIRECT
-            head = download_header(tbd_url, self.config, self.logger)
-            # while status is 300~ redirect and has a redirect link
-            while str(head).startswith("<Response [3"): 
-                if "Location" in head.headers:
-                    redir = head.headers["Location"]
-                    # if relative
-                    if urlparse(redir).netloc == "": 
-                        tbd_url = urljoin(head.url, redir)
-                    else:
-                        tbd_url = redir
-                elif "Refresh" in head.headers:
-                    redir = head.header["Refresh"]
-                    # if relative
-                    if urlparse(redir).netloc == "": 
-                        tbd_url = urljoin(head.url, redir)
-                    else:
-                        tbd_url = redir
-                else:
-                    break   
+                
+            # REQUEST HEAD FOR REDIRECT AND FILE SIZE
+            head = download_header(url, self.config, self.logger)
+            # find redirect as long as returned is different
+            redirect = self.headerRedirect(tbd_url, head)
+            while redirect != tbd_url:
+                head = download_header(url, self.config, self.logger)
+                redirect = self.headerRedirect(tbd_url, head)
+            # check if reported length is too big, if so, skip file
+            if "Content-Length" in head.headers and int(head.headers["Content-Length"]) > 1048576:
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue 
+                
             resp = download(tbd_url, self.config, self.logger)
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
@@ -64,10 +58,12 @@ class Worker(Thread):
 
             # Check if the status is 200
             size = 1048576 #initalized file size as 1 mb so file is not crawled in case status is not 200
-            headers = download_header(tbd_url, self.config, self.logger).headers
+            # headers = download_header(tbd_url, self.config, self.logger).headers ALREADY DOWNLOADED
             if resp.status == 200:
                 #detect and avoid crawling if file size is above threshold
                 if resp.raw_response is not None:
+                    # Hello I added a thing more ealier that does the same thing cuz I needed to use HEAD
+                    # Maybe we can move this?
                     if 'Content-Length' in headers:
                         size = int(headers['Content-Length'])
                     #if content length header not present, download max size and check if size is greater than threshold.
@@ -85,13 +81,15 @@ class Worker(Thread):
                                         
                 # Get the content of the url
                 soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+                
                 # after downlading, if we need to redirect, add redirect to frontier and move on
-                '''pos_redirect = self.checkRedirect(soup)
+                pos_redirect = self.checkRedirect(soup)
                 if pos_redirect is not None:
                     self.frontier.add_url(pos_redirect)
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
-                    continue'''
+                    continue
+                    
                 # does not crawl if website is titled 403 forbidden 
                 # eg https://swiki.ics.uci.edu/doku.php/projects:maint-spring-2021?tab_files=files&do=media&tab_details=view&image=virtual_environments%3Ajupyterhub%3Ajupyter-troubleshooting-1.png&ns=group%3Asupport%3Aservices,
                 if soup.find('title').string == "403 Forbidden":
@@ -144,3 +142,33 @@ class Worker(Thread):
             f"The longest page {max_url} has {max_len} words. "
             f"Top 50 most common words: {result[0:50]}"
             f"All ics.uci.edu subdomains: {ics_subdomains_formatted}")
+
+    def checkRedirect(self, soup):
+        # FOR META TAG ONLY
+        refreshes = soup.find("meta", http_equiv="refresh")
+        redirect = refreshes["content"] if refreshes else None
+        if redirect is not None and ";" in redirect:
+            redir_url = redirect.split(";")[-1]
+            return redir_url
+        return None
+    
+    def headerRedirect(self, url, head):
+        # request header only to check FOR REDIRECT
+        # check if location exists
+        if "Location" in head.headers:
+            redir = head.headers["Location"]
+            # if relative
+            if urlparse(redir).netloc == "": 
+                return urljoin(url, redir)
+            else:
+                return redir
+        # check if refresh exists
+        elif "Refresh" in head.headers:
+            redir = head.header["Refresh"]
+            # if relative
+            if urlparse(redir).netloc == "": 
+                return urljoin(url, redir)
+            else:
+                return redir
+        else:
+            return url   
