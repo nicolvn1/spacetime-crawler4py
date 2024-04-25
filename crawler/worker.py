@@ -46,7 +46,7 @@ class Worker(Thread):
             if "Content-Length" in head.headers and int(head.headers["Content-Length"]) > 1048576:
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
-                continue 
+                continue
                 
             resp = download(tbd_url, self.config, self.logger)
             self.logger.info(
@@ -97,7 +97,7 @@ class Worker(Thread):
                     
                 # does not crawl if website is titled 403 forbidden 
                 # eg https://swiki.ics.uci.edu/doku.php/projects:maint-spring-2021?tab_files=files&do=media&tab_details=view&image=virtual_environments%3Ajupyterhub%3Ajupyter-troubleshooting-1.png&ns=group%3Asupport%3Aservices,
-                if soup.find('title').string == "403 Forbidden" or "Page not found" in soup.find('title').string:
+                if soup.find('title').get_text() == "403 Forbidden" or "Page not found" in soup.find('title').get_text():
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
