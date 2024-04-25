@@ -92,7 +92,7 @@ class Worker(Thread):
                     
                 # does not crawl if website is titled 403 forbidden 
                 # eg https://swiki.ics.uci.edu/doku.php/projects:maint-spring-2021?tab_files=files&do=media&tab_details=view&image=virtual_environments%3Ajupyterhub%3Ajupyter-troubleshooting-1.png&ns=group%3Asupport%3Aservices,
-                if soup.find('title').string == "403 Forbidden":
+                if soup.find('title').string == "403 Forbidden" or "Page not found" in soup.find('title').string:
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
