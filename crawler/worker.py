@@ -89,6 +89,11 @@ class Worker(Thread):
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
+                canonical = self.checkCanonical(soup)
+                if canonical is not None:
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    continue
                     
                 # does not crawl if website is titled 403 forbidden 
                 # eg https://swiki.ics.uci.edu/doku.php/projects:maint-spring-2021?tab_files=files&do=media&tab_details=view&image=virtual_environments%3Ajupyterhub%3Ajupyter-troubleshooting-1.png&ns=group%3Asupport%3Aservices,
@@ -173,3 +178,15 @@ class Worker(Thread):
                 return redir
         else:
             return url   
+
+    def checkCanonical(self, soup):
+        # check for canonical web, which is a duplicate of current
+        # first check link rel
+        rel = soup.find("link", rel="canonical")
+        canonical = rel["href"] if rel else None
+        if canonical:
+            return canonical
+        # second check og url
+        og_url = soup.find("meta", property="og:url")
+        canonical = og_url["content"] if og_url else None
+        return canonical
