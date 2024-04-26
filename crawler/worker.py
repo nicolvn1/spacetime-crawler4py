@@ -58,8 +58,10 @@ class Worker(Thread):
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
-                
             resp = download(tbd_url, self.config, self.logger)
+            # Check if status is 200
+            if resp.status != 200:
+                continue
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
