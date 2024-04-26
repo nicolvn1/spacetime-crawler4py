@@ -5,6 +5,8 @@ from utils.download import download, download_header
 from utils import get_logger
 import scraper
 import time
+from urllib.parse import urlparse, urljoin
+import urllib.robotparser
 
 from bs4 import BeautifulSoup
 import re
