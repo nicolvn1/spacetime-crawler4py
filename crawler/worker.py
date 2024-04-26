@@ -116,18 +116,27 @@ class Worker(Thread):
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
+                # checking if canonical
                 canonical = self.checkCanonical(soup)
-                if canonical is not None:
-                    print("NON-CANONICAL")
+                if canonical.startswith("https"):
+                    comp_can = canonical[5:]
+                else:
+                    comp_can = canonical[4:]
+                if tbd_url.startswith("https"):
+                    comp_url = tbd_url[5:]
+                else:
+                    comp_url = tbd_url[4:]
+                if canonical is not None and comp_can.strip("/") != comp_url.strip("/"):
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
+                    print(f"NON-CANONICAL: {canonical} VS {tbd_url}")
                     continue
                     
                 # does not crawl if website is titled page not found 
                 title = soup.find("title")
                 title = title.text.lower() if title else ""
                 print(f"TITLE IS {title}")
-                if "page not found" in title:
+                if "page not found" in title or "404" in title or "403" in title:
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
@@ -166,7 +175,7 @@ class Worker(Thread):
             if ".ics.uci.edu" in link:
                 subdomain = link.split(".ics.uci.edu")[0] + ".ics.uci.edu"
                 if subdomain not in ics_subdomains:
-                    ics_subdomains[subdomain] = 0
+                    ics_subdomains[subdomain] = 1
                 else:
                     ics_subdomains[subdomain] += 1
 
