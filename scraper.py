@@ -114,7 +114,7 @@ def is_valid(url):
 
 def is_crawled(url):
     # check if url is already crawled/discovered
-    file_name = "web_log/"
+    file_name = "weblog/"
     if "ics.uci.edu" in urlparse(url).netloc:
         file_name += "ics_discovered.txt"
     elif "cs.uci.edu" in urlparse(url).netloc:
