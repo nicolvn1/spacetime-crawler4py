@@ -44,8 +44,14 @@ class Worker(Thread):
                 time.sleep(self.config.time_delay)
                 continue
             
-            # REQUEST HEAD FOR REDIRECT AND FILE SIZE
+            # REQUEST HEAD FOR STATUS CODE, REDIRECT, AND FILE SIZE
             head = download_header(tbd_url, self.config, self.logger)
+            if not str(head).startswith("<Response [2") or not str(head).startswith("<Response [3"):
+                print("HEAD IS NOT STATUS 200 or 300")
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
+            
             # find redirect as long as returned is different
             redirect = self.headerRedirect(tbd_url, head)
             while redirect != tbd_url:
