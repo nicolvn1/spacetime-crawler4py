@@ -36,8 +36,9 @@ def extract_next_links(url, resp):
             if urlparse(temp).netloc == "": 
                 temp = urljoin(resp.url, temp)
             # Check if the page exists
-            if soup.find('title').get_text() == "403 Forbidden" or "Page not found" in soup.find('title').get_text():
-                continue
+            if soup.find('title') != None:
+                if soup.find('title').get_text() == "403 Forbidden" or "Page not found" in soup.find('title').get_text():
+                    continue
             # Add a link without the fragment to the list of links
             if is_valid(temp) and not pos_trap(temp) and not pos_calendar(temp):
                 links.append(temp.split("#")[0])

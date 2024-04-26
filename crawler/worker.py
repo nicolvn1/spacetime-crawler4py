@@ -182,10 +182,13 @@ class Worker(Thread):
         robot_link = link.scheme + "://" + link.netloc
         robot_link = urljoin(robot_link, "robot.txt")
         rp.set_url(robot_link)
-        rp.read()
-        delay = rp.crawl_delay('*') 
-        delay = delay if delay else 0
-        return (rp.can_fetch('*', url), delay)
+        try:
+            rp.read()
+            delay = rp.crawl_delay('*') 
+            delay = delay if delay else 0
+            return (rp.can_fetch('*', url), delay)
+        except:
+            return (False, 0)
     
     def checkNoIndex(self, soup):
         noIndex = soup.find("meta", content="noindex")
