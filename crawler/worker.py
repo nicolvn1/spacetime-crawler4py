@@ -34,7 +34,14 @@ class Worker(Thread):
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
                 break
-                
+            # check robot.txt
+            can_crawl, delay = self.checkRobotTxt(tbd_url)
+            if not can_crawl:
+                print("ROBOT NOT CRAWLABLE")
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
+            
             # REQUEST HEAD FOR REDIRECT AND FILE SIZE
             head = download_header(tbd_url, self.config, self.logger)
             # find redirect as long as returned is different
@@ -54,7 +61,9 @@ class Worker(Thread):
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
-            
+            if delay > self.config.time_delay:
+                print(f"COOLDOWN: {self.config.time_delay - delay}")
+                time.sleep(delay - self.config.time_delay)
             #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
             unique_pages.add(tbd_url.split("#")[0])
 
@@ -160,6 +169,22 @@ class Worker(Thread):
             f"Top 50 most common words: {result[0:50]}"
             f"All ics.uci.edu subdomains: {ics_subdomains_formatted}")
 
+    def checkRobotTxt(self, url):
+        # check robot.txt to see if web is crawlable
+        # returns tuple of (Bool, delay-time)
+        rp = urllib.robotparser.RobotFileParser()
+        link = urlparse(url)
+        # invalid link
+        if not link.scheme or not link.netloc:
+            return (False, 0)
+        robot_link = link.scheme + "://" + link.netloc
+        robot_link = urljoin(robot_link, "robot.txt")
+        rp.set_url(robot_link)
+        rp.read()
+        delay = rp.crawl_delay('*') 
+        delay = delay if delay else 0
+        return (rp.can_fetch('*', url), delay)
+    
     def checkNoIndex(self, soup):
         noIndex = soup.find("meta", content="noindex")
         noFollow = soup.find("meta", content="nofollow")
