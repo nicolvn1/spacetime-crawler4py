@@ -32,16 +32,13 @@ def extract_next_links(url, resp):
         # Get the links
         for link in soup.find_all('a'):
             temp = link.get('href')
+            temp = temp.split("#")[0]
             #checks if url is absolute or relative. Transforms relative urls to absolute before adding to list.
             if urlparse(temp).netloc == "": 
                 temp = urljoin(resp.url, temp)
-            # Check if the page exists
-            if soup.find('title') != None:
-                if soup.find('title').get_text() == "403 Forbidden" or "Page not found" in soup.find('title').get_text():
-                    continue
             # Add a link without the fragment to the list of links
-            if is_valid(temp) and not pos_trap(temp) and not pos_calendar(temp):
-                links.append(temp.split("#")[0])
+            if is_valid(temp) and not pos_trap(temp) and not pos_calendar(temp) and not is_crawled(temp):
+                links.append(temp)
     return links
 
 def pos_trap(url):
@@ -113,3 +110,25 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise    
+
+
+def is_crawled(url):
+    # check if url is already crawled/discovered
+    file_name = "web_log/"
+    if "ics.uci.edu" in urlparse(url).netloc:
+        file_name += "ics_discovered.txt"
+    elif "cs.uci.edu" in urlparse(url).netloc:
+        file_name += "cs_discovered.txt"
+    elif "inf.uci.edu" in urlparse(url).netloc:
+        file_name += "inf_discovered.txt"
+    else: 
+        file_name += "stat_discovered.txt"
+    with open(file_name, "r") as file:
+        all_links = file.readlines()
+        withnewline = url + "\n"
+        if withnewline in all_links:
+            print(f"DUPLICATE/DISCOVERED: {url}")
+            return True
+    with open(file_name, "a") as file:
+        file.write(url + "\n")
+    return False
