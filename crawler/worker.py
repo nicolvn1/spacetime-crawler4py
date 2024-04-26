@@ -42,8 +42,10 @@ class Worker(Thread):
             while redirect != tbd_url:
                 head = download_header(tbd_url, self.config, self.logger)
                 redirect = self.headerRedirect(tbd_url, head)
+                print("REDIRECTING FROM HEAD")
             # check if reported length is too big, if so, skip file
             if "Content-Length" in head.headers and int(head.headers["Content-Length"]) > 1048576:
+                print("SKIP SIZE FROM HEAD")
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
@@ -81,23 +83,32 @@ class Worker(Thread):
                                         
                 # Get the content of the url
                 soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
-                
+                # check if html allows crawling
+                if self.checkNoIndex(soup):
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    print("NOINDEX,NOFOLLOW")
+                    continue
                 # after downlading, if we need to redirect, add redirect to frontier and move on
                 pos_redirect = self.checkRedirect(soup)
                 if pos_redirect is not None:
+                    print("ADDING REDIRECT TO FRONTIER")
                     self.frontier.add_url(pos_redirect)
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
                 canonical = self.checkCanonical(soup)
                 if canonical is not None:
+                    print("NON-CANONICAL")
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
                     
-                # does not crawl if website is titled 403 forbidden 
-                # eg https://swiki.ics.uci.edu/doku.php/projects:maint-spring-2021?tab_files=files&do=media&tab_details=view&image=virtual_environments%3Ajupyterhub%3Ajupyter-troubleshooting-1.png&ns=group%3Asupport%3Aservices,
-                if soup.find('title').get_text() == "403 Forbidden" or "Page not found" in soup.find('title').get_text():
+                # does not crawl if website is titled page not found 
+                title = soup.find("title")
+                title = title.text.lower() if title else ""
+                print(f"TITLE IS {title}")
+                if "page not found" in title:
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
@@ -149,6 +160,13 @@ class Worker(Thread):
             f"Top 50 most common words: {result[0:50]}"
             f"All ics.uci.edu subdomains: {ics_subdomains_formatted}")
 
+    def checkNoIndex(self, soup):
+        noIndex = soup.find("meta", content="noindex")
+        noFollow = soup.find("meta", content="nofollow")
+        noNeither = soup.find("meta", content="noindex,nofollow")
+        if noIndex or noFollow or noNeither:
+            return True
+    
     def checkRedirect(self, soup):
         # FOR META TAG ONLY
         refreshes = soup.find("meta", http_equiv="refresh")
