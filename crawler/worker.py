@@ -65,15 +65,18 @@ class Worker(Thread):
                 time.sleep(self.config.time_delay)
                 continue
             resp = download(tbd_url, self.config, self.logger)
-            # Check if status is 200
-            if resp.status != 200:
-                continue
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
             if delay > self.config.time_delay:
                 print(f"COOLDOWN: {self.config.time_delay - delay}")
                 time.sleep(delay - self.config.time_delay)
+            # Check if status is 200
+            if resp.status != 200:
+                print("STATUS NOT 200")
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
             #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
             unique_pages.add(tbd_url.split("#")[0])
 
