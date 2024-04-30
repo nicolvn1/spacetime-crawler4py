@@ -169,7 +169,7 @@ class Worker(Thread):
                         freq[k] = 1
                     else:
                         freq[k] += 1
-            #if file size is below 1mb and has > 100 distinct words, crawl. otherwise, avoid.
+            #if file size is below 1mb and has > 100 words, crawl. otherwise, avoid.
             if size < 1048576 and len(words) > 100:
                 #if good page, add to unique pages set
                 unique_pages.add(tbd_url.split("#")[0])
