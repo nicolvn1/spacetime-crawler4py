@@ -155,7 +155,7 @@ class Worker(Thread):
                 s.extract()
 
             # Create a list of words composed of alphanumeric characters and apostrophes
-            words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
+            words = [word for word in re.split("[^a-zA-Z0-9-']", soup.get_text()) if word != ""]
             # Find the page that has the most number of words
             if max_len < len(words):
                 max_len = len(words)
