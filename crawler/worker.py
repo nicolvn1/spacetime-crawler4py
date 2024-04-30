@@ -36,6 +36,8 @@ class Worker(Thread):
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
                 break
+            """
+            # Roboto.txt commented because not really working
             # check robot.txt
             can_crawl, delay = self.checkRobotTxt(tbd_url)
             if not can_crawl:
@@ -43,7 +45,9 @@ class Worker(Thread):
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
-            
+            """
+            """
+            # HEAD-related commented because not really working...
             # REQUEST HEAD FOR STATUS CODE, REDIRECT, AND FILE SIZE
             head = download_header(tbd_url, self.config, self.logger)
             if not str(head).startswith("<Response [2") or not str(head).startswith("<Response [3"):
@@ -64,16 +68,20 @@ class Worker(Thread):
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
+            """
+            
             resp = download(tbd_url, self.config, self.logger)
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
+            """
             if delay > self.config.time_delay:
                 print(f"COOLDOWN: {self.config.time_delay - delay}")
                 time.sleep(delay - self.config.time_delay)
-            # Check if status is 200
-            if resp.status != 200:
-                print("STATUS NOT 200")
+            """
+            # Check if status is 2xx
+            if resp.status // 100 != 2:
+                print("STATUS NOT 2xx")
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
@@ -82,8 +90,8 @@ class Worker(Thread):
             # headers = download_header(tbd_url, self.config, self.logger).headers ALREADY DOWNLOADED
             #detect and avoid crawling if file size is above threshold
             if resp.raw_response is not None:
-                # Hello I added a thing more ealier that does the same thing cuz I needed to use HEAD
-                # Maybe we can move this?
+                # temp head download here
+                head = download_header(tbd_url, self.config, self.logger)
                 if 'Content-Length' in head.headers:
                     size = int(head.headers['Content-Length'])
                 #if content length header not present, download max size and check if size is greater than threshold.
@@ -199,26 +207,6 @@ class Worker(Thread):
             f"The longest page {max_url} has {max_len} words. "
             f"Top 50 most common words: {result[0:50]}. "
             f"All ics.uci.edu subdomains: {ics_subdomains_formatted}")
-
-    def checkRobotTxt(self, url):
-        # check robot.txt to see if web is crawlable
-        # returns tuple of (Bool, delay-time)
-        rp = urllib.robotparser.RobotFileParser()
-        # parse link to only fed scheme and domain to the robot parser
-        link = urlparse(url)
-        # invalid link
-        if not link.scheme or not link.netloc:
-            return (False, 0)
-        robot_link = link.scheme + "://" + link.netloc
-        robot_link = urljoin(robot_link, "robot.txt")
-        rp.set_url(robot_link)
-        try:
-            rp.read()
-            delay = rp.crawl_delay('*') 
-            delay = delay if delay else 0
-            return (rp.can_fetch('*', url), delay)
-        except Exception as e:
-            return (False, 0)
     
     def checkNoIndex(self, soup):
         noIndex = soup.find("meta", content="noindex")
@@ -268,3 +256,26 @@ class Worker(Thread):
         og_url = soup.find("meta", property="og:url")
         canonical = og_url["content"] if og_url else None
         return canonical
+
+    """
+    # Commented out because not really working
+    def checkRobotTxt(self, url):
+        # check robot.txt to see if web is crawlable
+        # returns tuple of (Bool, delay-time)
+        rp = urllib.robotparser.RobotFileParser()
+        # parse link to only fed scheme and domain to the robot parser
+        link = urlparse(url)
+        # invalid link
+        if not link.scheme or not link.netloc:
+            return (False, 0)
+        robot_link = link.scheme + "://" + link.netloc
+        robot_link = urljoin(robot_link, "robot.txt")
+        rp.set_url(robot_link)
+        try:
+            rp.read()
+            delay = rp.crawl_delay('*') 
+            delay = delay if delay else 0
+            return (rp.can_fetch('*', url), delay)
+        except Exception as e:
+            return (False, 0)
+        """
