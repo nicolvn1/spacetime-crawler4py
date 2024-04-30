@@ -39,6 +39,12 @@ def extract_next_links(url, resp):
             #checks if url is absolute or relative. Transforms relative urls to absolute before adding to list.
             if urlparse(temp).netloc == "": 
                 temp = urljoin(resp.url, temp)
+            # Check if the page exists
+            title = soup.find("title")
+            title = title.text.lower() if title else ""
+            if title != None:
+                if title == "403 forbidden" or "page not found" in title:
+                    continue
             # Add a link without the fragment to the list of links
             if is_valid(temp) and not pos_trap(temp) and not pos_calendar(temp) and not is_crawled(temp):
                 links.append(temp)
