@@ -77,8 +77,6 @@ class Worker(Thread):
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
-            #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
-            unique_pages.add(tbd_url.split("#")[0])
 
             size = 1048576 #initalized file size as 1 mb so file is not crawled in case status is not 200
             # headers = download_header(tbd_url, self.config, self.logger).headers ALREADY DOWNLOADED
@@ -168,6 +166,8 @@ class Worker(Thread):
                         freq[k] += 1
             #if file size is below 1mb and has > 100 distinct words, crawl. otherwise, avoid.
             if size < 1048576 and len(freq.keys()) > 100:
+                #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
+                unique_pages.add(tbd_url.split("#")[0])
                 scraped_urls = scraper.scraper(tbd_url, resp)
                 for scraped_url in scraped_urls:
                     self.frontier.add_url(scraped_url)
