@@ -24,7 +24,10 @@ def extract_next_links(url, resp):
     # Only look at the link if the status is 200
     if resp.status == 200:
         # Get the content from the response
-        soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+        try:
+            soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+        except Exception as e:
+            return list()
         # Extract the script and style elements of the page
         for s in soup(["script", "style"]):
             s.extract()
