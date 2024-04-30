@@ -82,97 +82,95 @@ class Worker(Thread):
 
             size = 1048576 #initalized file size as 1 mb so file is not crawled in case status is not 200
             # headers = download_header(tbd_url, self.config, self.logger).headers ALREADY DOWNLOADED
-            # Check if the status is 200
-            if resp.status == 200:
-                #detect and avoid crawling if file size is above threshold
-                if resp.raw_response is not None:
-                    # Hello I added a thing more ealier that does the same thing cuz I needed to use HEAD
-                    # Maybe we can move this?
-                    if 'Content-Length' in head.headers:
-                        size = int(head.headers['Content-Length'])
-                    #if content length header not present, download max size and check if size is greater than threshold.
-                    #if not, proceed. if so, break so file is not crawled.
+            #detect and avoid crawling if file size is above threshold
+            if resp.raw_response is not None:
+                # Hello I added a thing more ealier that does the same thing cuz I needed to use HEAD
+                # Maybe we can move this?
+                if 'Content-Length' in head.headers:
+                    size = int(head.headers['Content-Length'])
+                #if content length header not present, download max size and check if size is greater than threshold.
+                #if not, proceed. if so, break so file is not crawled.
+                else:
+                    response = requests.get(tbd_url, stream = True)
+                    size = 0
+                    with open('tempTestFile', 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=1024):
+                            if chunk:
+                                f.write(chunk)
+                                size += len(chunk)
+                                if size > 1048576:
+                                    break
+                                    
+            # Get the content of the url
+            try:
+                soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+            except Exception as e:
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                print("BROKEN HTML")
+                continue
+            # check if html allows crawling
+            if self.checkNoIndex(soup):
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                print("NOINDEX,NOFOLLOW")
+                continue
+            # after downlading, if we need to redirect, add redirect to frontier and move on
+            pos_redirect = self.checkRedirect(soup)
+            if pos_redirect is not None:
+                print("ADDING REDIRECT TO FRONTIER")
+                self.frontier.add_url(pos_redirect)
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
+            # checking if canonical
+            canonical = self.checkCanonical(soup)
+            if canonical.startswith("https"):
+                comp_can = canonical[5:]
+            else:
+                comp_can = canonical[4:]
+            if tbd_url.startswith("https"):
+                comp_url = tbd_url[5:]
+            else:
+                comp_url = tbd_url[4:]
+            if canonical is not None and comp_can.strip("/") != comp_url.strip("/"):
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                print(f"NON-CANONICAL: {canonical} VS {tbd_url}")
+                continue
+                
+            # does not crawl if website is titled page not found 
+            title = soup.find("title")
+            title = title.text.lower() if title else ""
+            print(f"TITLE IS {title}")
+            if "page not found" in title or "404" in title or "403" in title:
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
+            # Remove the script and style elements of the page
+            for s in soup(["script", "style"]):
+                s.extract()
+
+            # Create a list of words composed of alphanumeric characters and apostrophes
+            words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
+            # Find the page that has the most number of words
+            if max_len < len(words):
+                max_len = len(words)
+                max_url = tbd_url
+
+            # Create a dictionary with a word as a key and its frequency as the value
+            for k in words:
+                k = k.lower()
+                if len(k) > 1 and k not in stopwords:
+                    if k not in freq:
+                        freq[k] = 1
                     else:
-                        response = requests.get(tbd_url, stream = True)
-                        size = 0
-                        with open('tempTestFile', 'wb') as f:
-                            for chunk in response.iter_content(chunk_size=1024):
-                                if chunk:
-                                    f.write(chunk)
-                                    size += len(chunk)
-                                    if size > 1048576:
-                                        break
-                                        
-                # Get the content of the url
-                try:
-                    soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
-                except Exception as e:
-                    self.frontier.mark_url_complete(tbd_url)
-                    time.sleep(self.config.time_delay)
-                    print("BROKEN HTML")
-                    continue
-                # check if html allows crawling
-                if self.checkNoIndex(soup):
-                    self.frontier.mark_url_complete(tbd_url)
-                    time.sleep(self.config.time_delay)
-                    print("NOINDEX,NOFOLLOW")
-                    continue
-                # after downlading, if we need to redirect, add redirect to frontier and move on
-                pos_redirect = self.checkRedirect(soup)
-                if pos_redirect is not None:
-                    print("ADDING REDIRECT TO FRONTIER")
-                    self.frontier.add_url(pos_redirect)
-                    self.frontier.mark_url_complete(tbd_url)
-                    time.sleep(self.config.time_delay)
-                    continue
-                # checking if canonical
-                canonical = self.checkCanonical(soup)
-                if canonical.startswith("https"):
-                    comp_can = canonical[5:]
-                else:
-                    comp_can = canonical[4:]
-                if tbd_url.startswith("https"):
-                    comp_url = tbd_url[5:]
-                else:
-                    comp_url = tbd_url[4:]
-                if canonical is not None and comp_can.strip("/") != comp_url.strip("/"):
-                    self.frontier.mark_url_complete(tbd_url)
-                    time.sleep(self.config.time_delay)
-                    print(f"NON-CANONICAL: {canonical} VS {tbd_url}")
-                    continue
-                    
-                # does not crawl if website is titled page not found 
-                title = soup.find("title")
-                title = title.text.lower() if title else ""
-                print(f"TITLE IS {title}")
-                if "page not found" in title or "404" in title or "403" in title:
-                    self.frontier.mark_url_complete(tbd_url)
-                    time.sleep(self.config.time_delay)
-                    continue
-                # Remove the script and style elements of the page
-                for s in soup(["script", "style"]):
-                    s.extract()
-
-                # Create a list of words composed of alphanumeric characters and apostrophes
-                words = [word for word in re.split("[^a-zA-Z0-9']", soup.get_text()) if word != ""]
-                # Find the page that has the most number of words
-                if max_len < len(words):
-                    max_len = len(words)
-                    max_url = tbd_url
-
-                # Create a dictionary with a word as a key and its frequency as the value
-                for k in words:
-                    k = k.lower()
-                    if len(k) > 1 and k not in stopwords:
-                        if k not in freq:
-                            freq[k] = 1
-                        else:
-                            freq[k] += 1
-                #if file size is below 1mb and has > 100 distinct words, crawl. otherwise, avoid.
-                if size < 1048576 and len(freq.keys()) > 100:
-                    scraped_urls = scraper.scraper(tbd_url, resp)
-                    for scraped_url in scraped_urls:
-                        self.frontier.add_url(scraped_url)
+                        freq[k] += 1
+            #if file size is below 1mb and has > 100 distinct words, crawl. otherwise, avoid.
+            if size < 1048576 and len(freq.keys()) > 100:
+                scraped_urls = scraper.scraper(tbd_url, resp)
+                for scraped_url in scraped_urls:
+                    self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
 
