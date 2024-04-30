@@ -104,7 +104,13 @@ class Worker(Thread):
                                         break
                                         
                 # Get the content of the url
-                soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+                try:
+                    soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+                except Exception as e:
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    print("BROKEN HTML")
+                    continue
                 # check if html allows crawling
                 if self.checkNoIndex(soup):
                     self.frontier.mark_url_complete(tbd_url)
