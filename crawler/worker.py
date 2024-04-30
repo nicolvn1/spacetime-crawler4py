@@ -165,7 +165,7 @@ class Worker(Thread):
                     else:
                         freq[k] += 1
             #if file size is below 1mb and has > 100 distinct words, crawl. otherwise, avoid.
-            if size < 1048576 and len(freq.keys()) > 100:
+            if size < 1048576 and len(words) > 100:
                 #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
                 unique_pages.add(tbd_url.split("#")[0])
                 scraped_urls = scraper.scraper(tbd_url, resp)
