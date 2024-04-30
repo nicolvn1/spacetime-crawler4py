@@ -98,6 +98,10 @@ class Worker(Thread):
                                 size += len(chunk)
                                 if size > 1048576:
                                     break
+                        if size > 1048576:
+                            self.frontier.mark_url_complete(tbd_url)
+                            time.sleep(self.config.time_delay)
+                            continue
                                     
             # Get the content of the url
             try:
