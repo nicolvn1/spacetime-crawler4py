@@ -166,7 +166,7 @@ class Worker(Thread):
                         freq[k] += 1
             #if file size is below 1mb and has > 100 distinct words, crawl. otherwise, avoid.
             if size < 1048576 and len(words) > 100:
-                #if completed, add to unique pages set. otherwise, add to pages to be downloaded.
+                #if good page, add to unique pages set
                 unique_pages.add(tbd_url.split("#")[0])
                 scraped_urls = scraper.scraper(tbd_url, resp)
                 for scraped_url in scraped_urls:
@@ -199,6 +199,7 @@ class Worker(Thread):
         # check robot.txt to see if web is crawlable
         # returns tuple of (Bool, delay-time)
         rp = urllib.robotparser.RobotFileParser()
+        # parse link to only fed scheme and domain to the robot parser
         link = urlparse(url)
         # invalid link
         if not link.scheme or not link.netloc:
@@ -211,7 +212,7 @@ class Worker(Thread):
             delay = rp.crawl_delay('*') 
             delay = delay if delay else 0
             return (rp.can_fetch('*', url), delay)
-        except:
+        except Exception as e:
             return (False, 0)
     
     def checkNoIndex(self, soup):
