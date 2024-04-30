@@ -125,8 +125,9 @@ class Worker(Thread):
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
-            # checking if canonical
+            # checking if canonical or duplicate
             canonical = self.checkCanonical(soup)
+            # make sure https and http is not messing with the checking
             if canonical.startswith("https"):
                 comp_can = canonical[5:]
             else:
