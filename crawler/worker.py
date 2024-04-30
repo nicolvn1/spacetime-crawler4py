@@ -194,7 +194,7 @@ class Worker(Thread):
         self.logger.info(
             f"{len(unique_pages)} total unique urls discovered. "
             f"The longest page {max_url} has {max_len} words. "
-            f"Top 50 most common words: {result[0:50]}"
+            f"Top 50 most common words: {result[0:50]}. "
             f"All ics.uci.edu subdomains: {ics_subdomains_formatted}")
 
     def checkRobotTxt(self, url):
