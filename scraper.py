@@ -6,7 +6,7 @@ from dateutil.parser import parse
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
-    return [link for link in links if is_valid(link)]
+    return [link for link in links if is_valid(link) and not check_tribe_bar_date(url, link)]
 
 def extract_next_links(url, resp):
     # Implementation required.
@@ -59,34 +59,12 @@ def pos_trap(url):
                     return True
     return False
 
-def pos_calendar(url):
-    # detect possible trap by checking if query or path has a calendar date
-    link = urlparse(url)
-    queries = link.query.split("&")
-    path_list = link.path.split("/")
-    try:
-        path_list.pop()
-        path_list.pop(0)
-        if path_list != []:
-            path_list[-1] = path_list[-1].split(".")[0] # just in case last one ends in .html or something
-    except IndexError:
-        pass
-    # for every query, check if it has date format in the query = 
-    for query in queries:
-        filtered = query.split("=")[-1]
-        # thank you stackoverflow for the date checking piece of code 
-        try:
-            parse(filtered, fuzzy=False)
-            return True
-        except ValueError:
-            continue
-    # for every section in path, check if path is in date format
-    for path in path_list:
-        try: 
-            parse(path, fuzzy=False)
-            return True
-        except ValueError:
-            continue
+def check_tribe_bar_date(current, next):
+    # check if tribe-bar-date query is in current and next (possile calendar trap?)
+    current_link = urlparse(current)
+    next_link = urlparse(next)
+    if "tribe-bar-date" in current_link.query and "tribe-bar-date" in next_link.query:
+        return True
     return False
 
 def is_valid(url):
