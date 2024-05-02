@@ -103,14 +103,20 @@ def is_crawled(url):
         file_name += "cs_discovered.txt"
     else: 
         file_name += "stat_discovered.txt"
-    open_file = open(file_name, "r")
-    all_links = open_file.readlines()
-    withnewline = url + "\n"
-    if withnewline in all_links:
+    try:
+        # open file and see if link is there
+        open_file = open(file_name, "r", encoding = "utf-8")
+        all_links = open_file.readlines()
+        withnewline = url + "\n"
+        if withnewline in all_links:
+            open_file.close()
+            return True
         open_file.close()
+        # open file and write link if not there
+        open_file = open(file_name, "a", encoding = "utf-8")
+        open_file.write(withnewline)
+        open_file.close()
+        return False
+    except Exception as e:
+        # there is issue in writing this file, let's not parse it
         return True
-    open_file.close()
-    open_file = open(file_name, "a")
-    open_file.write(withnewline)
-    open_file.close()
-    return False
