@@ -44,7 +44,7 @@ class Worker(Thread):
                 # check header for redirect
                 header_redirect = self.headerRedirect(tbd_url, header)
                 if not self.checkSameUrl(tbd_url, header_redirect):
-                    if not self.checkDiscovered(header_redirect):
+                    if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect)):
                         self.frontier.add_url(header_redirect)
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
@@ -89,7 +89,7 @@ class Worker(Thread):
             # check redirects 
             redirect = self.checkRedirect(soup)
             if redirect and not self.checkSameUrl(redirect, tbd_url):
-                if not self.checkDiscovered(redirect):
+                if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect))::
                     self.frontier.add_url(redirect)
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
@@ -267,28 +267,6 @@ class Worker(Thread):
             f"The longest page {self.max_url} has {self.max_len} words. "
             f"Top 50 most common words: {result[0:50]}. "
             f"All ics.uci.edu subdomains: {self.ics_subdomains_formatted}")
-
-    def checkDiscovered(self, url):
-        # open one of the four discovered files to see if link is there
-        file_name = "weblog/"
-        parsed = urlparse(url)
-        if "informatics.uci.edu" in parsed.netloc:
-            file_name += "inf_discovered.txt"
-        elif "ics.uci.edu" in parsed.netloc:
-            file_name += "ics_discovered.txt"
-        elif "cs.uci.edu" in parsed.netloc:
-            file_name += "cs_discovered.txt"
-        else:
-            file_name += "stat_discovered.txt"
-        # open file and see if link is there
-        open_file = open(file_name, "r")
-        all_links = open_file.readlines()
-        withNewLine = url + "\n"
-        if withNewLine in all_links:
-            open_file.close()
-            return True
-        open_file.close()
-        return False
 
     def downloadHeader(self, url):
         # request header from url, returns None if timeout or something
