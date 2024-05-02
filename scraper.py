@@ -75,7 +75,8 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
-        elif "ics.uci.edu" not in parsed.netloc and "cs.uci.edu" not in parsed.netloc and "informatics.uci.edu" not in parsed.netloc and "stat.uci.edu" not in parsed.netloc:
+        if ((".ics.uci.edu" not in parsed.netloc and ".cs.uci.edu" not in parsed.netloc and ".informatics.uci.edu" not in parsed.netloc and ".stat.uci.edu" not in parsed.netloc)
+            and ("/ics.uci.edu" not in parsed.netloc and "/cs.uci.edu" not in parsed.netloc and "/informatics.uci.edu" not in parsed.netloc and "/stat.uci.edu" not in parsed.netloc)):
             return False
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
