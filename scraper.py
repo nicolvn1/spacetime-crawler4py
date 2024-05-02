@@ -19,30 +19,29 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     
-    # Initialize empty list to keep track of links
-    links = []
-    # Only look at the link if the status is 200
-    if resp.status == 200:
-        # Get the content from the response
-        try:
-            soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
-        except Exception as e:
-            return list()
-        # Extract the script and style elements of the page
-        for s in soup(["script", "style"]):
-            s.extract()
-        temp = ""
-        # Get the links
-        for link in soup.find_all('a'):
-            temp = link.get('href')
-            temp = temp.split("#")[0]
-            #checks if url is absolute or relative. Transforms relative urls to absolute before adding to list.
-            if urlparse(temp).netloc == "": 
-                temp = urljoin(resp.url, temp)
-            # Add a link without the fragment to the list of links
-            if is_valid(temp) and not pos_trap(temp) and not pos_calendar(temp) and not is_crawled(temp):
-                links.append(temp)
-    return links
+    # Initialize empty set to keep track of unique links
+    link_set = set()
+    # Get the content from the response
+    try:
+        # from_encoding keep???
+        soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+    except Exception as e:
+        return list()
+    temp = ""
+    # Get the links
+    for link in soup.find_all('a'):
+        temp = link.get('href')
+        # no temp or temp is just fragment
+        if not temp or temp.startswith('#'):
+            continue
+        # defragment
+        temp = urldefrag(temp)[0]
+        #checks if url is absolute or relative. Transforms relative urls to absolute before adding to list.
+        if urlparse(temp).netloc == "": 
+            temp = urljoin(resp.url, temp)
+        # add to set if not already there
+        link_set.add(temp)
+    return list(link_set)
 
 def pos_trap(url):
     # detect possible trap by checking if the last 3 path sections are duplicates
