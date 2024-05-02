@@ -19,11 +19,3 @@ def download(url, config, logger=None):
         "error": f"Spacetime Response error {resp} with url {url}.",
         "status": resp.status_code,
         "url": url})
-
-def download_header(url, config, logger=None):
-    host, port = config.cache_server
-    resp = requests.head(
-        f"http://{host}:{port}/",
-        params=[("q", f"{url}"), ("u", f"{config.user_agent}")])
-    if resp and resp.headers:
-        return resp
