@@ -37,7 +37,11 @@ class Worker(Thread):
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
                 break
-
+            # if link is not valid
+            if not scraper.is_valid(tbd_url):
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
             # Header checking
             header = self.downloadHeader(tbd_url)
             if header:
