@@ -1,7 +1,7 @@
 from threading import Thread
 
 from inspect import getsource
-from utils.download import download, download_header
+from utils.download import download
 from utils import get_logger
 import scraper
 import time
@@ -39,7 +39,7 @@ class Worker(Thread):
                 break
 
             # Header checking
-            header = download_header(tbd_url)
+            header = self.downloadHeader(tbd_url)
             if header:
                 # check header for redirect
                 header_redirect = self.headerRedirect(tbd_url, header)
@@ -289,5 +289,12 @@ class Worker(Thread):
             return True
         open_file.close()
         return False
-        
+
+    def downloadHeader(self, url):
+        # request header from url, returns None if timeout or something
+        try:
+            header = requests.head(url, timeout=5)
+            return header if header else None
+        except Exception as e:
+            return None
         
