@@ -39,6 +39,7 @@ class Worker(Thread):
                 break
             # if link is not valid
             if not scraper.is_valid(tbd_url):
+                print(f"{tbd_url} is not valid")
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
@@ -48,6 +49,7 @@ class Worker(Thread):
                 # check header for redirect
                 header_redirect = self.headerRedirect(tbd_url, header)
                 if not self.checkSameUrl(tbd_url, header_redirect):
+                    print(f"Header redirect to {header_redirect}")
                     if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect)):
                         self.frontier.add_url(header_redirect)
                     self.frontier.mark_url_complete(tbd_url)
@@ -55,6 +57,7 @@ class Worker(Thread):
                     continue
                 # check header to see if the file is too big to download > 1mb
                 if not self.checkLengthHeader(header):
+                    print("File too big")
                     self.frontier.mark_url_complete(tbd_url)
                     time.sleep(self.config.time_delay)
                     continue
@@ -62,6 +65,7 @@ class Worker(Thread):
             resp = download(tbd_url, self.config, self.logger)
             # just in case the download fails
             if resp is None or resp.raw_response is None:
+                print("No content")
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
@@ -87,12 +91,14 @@ class Worker(Thread):
                 continue
             # check crawlable
             if not self.checkCrawlable(soup):
+                print("not crawlable")
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
             # check redirects 
             redirect = self.checkRedirect(soup)
             if redirect and not self.checkSameUrl(redirect, tbd_url):
+                print(f"redirect to {redirect}")
                 if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect))::
                     self.frontier.add_url(redirect)
                 self.frontier.mark_url_complete(tbd_url)
@@ -102,6 +108,7 @@ class Worker(Thread):
             word_count = self.cakcData(resp)
             # if less than 100 word, let's not scrap other links from it
             if word_count < 100:
+                print("file to small")
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
@@ -148,6 +155,7 @@ class Worker(Thread):
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
+        self.finalResults()
 
 
     def calcData(self, resp):
@@ -266,7 +274,12 @@ class Worker(Thread):
         for subdomain in sorted(self.ics_subdomains.keys()):
             self.ics_subdomains_formatted.append(f"{subdomain}, {self.ics_subdomains[subdomain]}")
         result = sorted(self.freq.items(), key = lambda x: (-x[1], x[0]))
-        self.logger.info(
+        with open("report.txt", "a") as report_file:
+            report_file.write(f"{len(self.unique_pages)} total unique urls discovered. "
+            f"The longest page {self.max_url} has {self.max_len} words. "
+            f"Top 50 most common words: {result[0:50]}. "
+            f"All ics.uci.edu subdomains: {self.ics_subdomains_formatted}\n")
+        print(
             f"{len(self.unique_pages)} total unique urls discovered. "
             f"The longest page {self.max_url} has {self.max_len} words. "
             f"Top 50 most common words: {result[0:50]}. "
