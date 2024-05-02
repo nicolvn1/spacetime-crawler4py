@@ -37,16 +37,30 @@ class Worker(Thread):
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
                 break
-            """
+
             # Header checking
             header = download_header(tbd_url)
             if header:
                 # check header for redirect
-                header_redirect = self.check_redirect_header(header, tbd_url)
-            FIX
-            """
-            
+                header_redirect = self.headerRedirect(tbd_url, header)
+                if not self.checkSameUrl(tbd_url, header_redirect):
+                    if not self.checkDiscovered(header_redirect):
+                        self.frontier.add_url(header_redirect)
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    continue
+                # check header to see if the file is too big to download > 1mb
+                if not self.checkLengthHeader(header):
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    continue
+            # download the web
             resp = download(tbd_url, self.config, self.logger)
+            # just in case the download fails
+            if resp is None or resp.raw_response is None:
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
@@ -54,14 +68,43 @@ class Worker(Thread):
             self.count += 1
             if self.count == 100:
                 self.count = 0
-                # print out results
+                self.finalResults()
             # Check if status is 2xx
             if resp.status // 100 != 2:
-                print("STATUS NOT 2xx")
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
+            # try to soup it
+            try:
+                soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
+            except Exception as e:
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
+            # check crawlable
+            if not self.checkCrawlable(soup):
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
+            # check redirects 
+            redirect = self.checkRedirect(soup)
+            if redirect and not self.checkSameUrl(redirect, tbd_url):
+                if not self.checkDiscovered(redirect):
+                    self.frontier.add_url(redirect)
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+                continue
+            # add to self data and calculate word count
+            word_count = self.cakcData(resp)
+            # if less than 100 word, let's not scrap other links from it
+            if word_count < 100:
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
 
+            """
+            # COMMENT REASON: header length already checked
+            # ANOTHER THING: code is checking size by downloading the web AGAIN -> potential impoliteness for downloading again too soon
             size = 1048576 #initalized file size as 1 mb so file is not crawled in case status is not 200
             # headers = download_header(tbd_url, self.config, self.logger).headers ALREADY DOWNLOADED
             #detect and avoid crawling if file size is above threshold
@@ -86,106 +129,26 @@ class Worker(Thread):
                             self.frontier.mark_url_complete(tbd_url)
                             time.sleep(self.config.time_delay)
                             continue
-                                    
-            # Get the content of the url
-            try:
-                soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
-            except Exception as e:
-                self.frontier.mark_url_complete(tbd_url)
-                time.sleep(self.config.time_delay)
-                print("BROKEN HTML")
-                continue
-            # check if html allows crawling
-            if self.checkNoIndex(soup):
-                self.frontier.mark_url_complete(tbd_url)
-                time.sleep(self.config.time_delay)
-                print("NOINDEX,NOFOLLOW")
-                continue
-            # after downlading, if we need to redirect, add redirect to frontier and move on
-            pos_redirect = self.checkRedirect(soup)
-            if pos_redirect is not None:
-                print("ADDING REDIRECT TO FRONTIER")
-                self.frontier.add_url(pos_redirect)
-                self.frontier.mark_url_complete(tbd_url)
-                time.sleep(self.config.time_delay)
-                continue
-            # checking if canonical or duplicate
-            canonical = self.checkCanonical(soup)
-            # make sure https and http is not messing with the checking
-            if canonical.startswith("https"):
-                comp_can = canonical[5:]
-            else:
-                comp_can = canonical[4:]
-            if tbd_url.startswith("https"):
-                comp_url = tbd_url[5:]
-            else:
-                comp_url = tbd_url[4:]
-            if canonical is not None and comp_can.strip("/") != comp_url.strip("/"):
-                self.frontier.mark_url_complete(tbd_url)
-                time.sleep(self.config.time_delay)
-                print(f"NON-CANONICAL: {canonical} VS {tbd_url}")
-                continue
-                
+            """      
+
             # does not crawl if website is titled page not found 
             title = soup.find("title")
             title = title.text.lower() if title else ""
-            print(f"TITLE IS {title}")
             if "page not found" in title or "404" in title or "403" in title:
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
-            # Remove the script and style elements of the page
-            for s in soup(["script", "style"]):
-                s.extract()
 
-            # Create a list of words composed of alphanumeric characters and apostrophes
-            words = [word for word in re.split("[^a-zA-Z0-9-']", soup.get_text()) if word != ""]
-            # Find the page that has the most number of words
-            if max_len < len(words):
-                max_len = len(words)
-                max_url = tbd_url
-
-            # Create a dictionary with a word as a key and its frequency as the value
-            for k in words:
-                k = k.lower()
-                if len(k) > 1 and k not in stopwords:
-                    if k not in freq:
-                        freq[k] = 1
-                    else:
-                        freq[k] += 1
-            #if file size is below 1mb and has > 100 words, crawl. otherwise, avoid.
-            if size < 1048576 and len(words) > 100:
-                #if good page, add to unique pages set
-                unique_pages.add(tbd_url.split("#")[0])
-                scraped_urls = scraper.scraper(tbd_url, resp)
-                for scraped_url in scraped_urls:
-                    self.frontier.add_url(scraped_url)
+            scraped_urls = scraper.scraper(tbd_url, resp)
+            for scraped_url in scraped_urls:
+                self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
 
-        # Sort the items in the dictionary of frequencies by descending order
-        result = sorted(freq.items(), key=lambda x:(-x[1],x[0]))
-        
-        # Check the subdomains
-        for link in unique_pages:
-            if ".ics.uci.edu" in link:
-                subdomain = link.split(".ics.uci.edu")[0] + ".ics.uci.edu"
-                if subdomain not in ics_subdomains:
-                    ics_subdomains[subdomain] = 1
-                else:
-                    ics_subdomains[subdomain] += 1
-
-        for subdomain in sorted(ics_subdomains.keys()):
-            ics_subdomains_formatted.append(f"{subdomain}, {ics_subdomains[subdomain]}")
-            
-        self.logger.info(
-            f"{len(unique_pages)} total unique urls discovered. "
-            f"The longest page {max_url} has {max_len} words. "
-            f"Top 50 most common words: {result[0:50]}. "
-            f"All ics.uci.edu subdomains: {ics_subdomains_formatted}")
 
     def calcData(self, resp):
         # calculates the word count of content
+        unique_pages.add(resp.url)
         soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
         # Remove the script and style elements of the page
         for s in soup(["script", "style"]):
@@ -285,7 +248,7 @@ class Worker(Thread):
         canonical = og_url["content"] if og_url else None
         return canonical
 
-    def check_same_url(self, url1, url2):
+    def checkSameUrl(self, url1, url2):
         # check two urls regardless of scheme and www.
         parsed1 = urlparse(url1)
         parsed2 = urlparse(url2)
@@ -294,7 +257,7 @@ class Worker(Thread):
         return (netloc1 == netloc2 and parsed1.path == parsed2.path and parsed1.query == parsed2.query
                 and parsed1.param == parsed2.param)
 
-    def final_results(self):
+    def finalResults(self):
         # print all 4 questions
         for subdomain in sorted(self.ics_subdomains.keys()):
             self.ics_subdomains_formatted.append(f"{subdomain}, {self.ics_subdomains[subdomain]}")
@@ -304,5 +267,27 @@ class Worker(Thread):
             f"The longest page {self.max_url} has {self.max_len} words. "
             f"Top 50 most common words: {result[0:50]}. "
             f"All ics.uci.edu subdomains: {self.ics_subdomains_formatted}")
+
+    def checkDiscovered(self, url):
+        # open one of the four discovered files to see if link is there
+        file_name = "weblog/"
+        parsed = urlparse(url)
+        if "informatics.uci.edu" in parsed.netloc:
+            file_name += "inf_discovered.txt"
+        elif "ics.uci.edu" in parsed.netloc:
+            file_name += "ics_discovered.txt"
+        elif "cs.uci.edu" in parsed.netloc:
+            file_name += "cs_discovered.txt"
+        else:
+            file_name += "stat_discovered.txt"
+        # open file and see if link is there
+        open_file = open(file_name, "r")
+        all_links = open_file.readlines()
+        withNewLine = url + "\n"
+        if withNewLine in all_links:
+            open_file.close()
+            return True
+        open_file.close()
+        return False
         
         
