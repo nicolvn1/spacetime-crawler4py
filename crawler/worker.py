@@ -99,7 +99,7 @@ class Worker(Thread):
             redirect = self.checkRedirect(soup)
             if redirect and not self.checkSameUrl(redirect, tbd_url):
                 print(f"redirect to {redirect}")
-                if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect))::
+                if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect)):
                     self.frontier.add_url(redirect)
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
@@ -160,7 +160,7 @@ class Worker(Thread):
 
     def calcData(self, resp):
         # calculates the word count of content
-        unique_pages.add(resp.url)
+        self.unique_pages.add(resp.url)
         soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
         # Remove the script and style elements of the page
         for s in soup(["script", "style"]):
@@ -245,7 +245,7 @@ class Worker(Thread):
         if redirect:
             if ";" in redirect:
                 return redirect.split(";")[0]
-            return redir_url
+            return redirect
         return None
     
     def checkCanonical(self, soup):
