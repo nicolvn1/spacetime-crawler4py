@@ -99,7 +99,7 @@ class Worker(Thread):
             redirect = self.checkRedirect(soup)
             if redirect and not self.checkSameUrl(redirect, tbd_url):
                 print(f"redirect to {redirect}")
-                if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect)):
+                if (scraper.is_valid(redirect) and not scraper.check_tribe_bar_date(tbd_url, redirect) and not scraper.is_crawled(redirect)):
                     self.frontier.add_url(redirect)
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
