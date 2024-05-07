@@ -267,7 +267,7 @@ class Worker(Thread):
         netloc1 = parsed1.netloc.strip("www.")
         netloc2 = parsed2.netloc.strip("www.")
         return (netloc1 == netloc2 and parsed1.path == parsed2.path and parsed1.query == parsed2.query
-                and parsed1.param == parsed2.param)
+                and parsed1.params == parsed2.params)
 
     def finalResults(self):
         # print all 4 questions
