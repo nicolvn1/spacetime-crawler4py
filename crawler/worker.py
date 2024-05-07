@@ -73,9 +73,9 @@ class Worker(Thread):
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
             # to print out result every 100 downloads
-            self.count += 1
-            if self.count == 100:
-                self.count = 0
+            self.counter += 1
+            if self.counter == 100:
+                self.counter = 0
                 self.finalResults()
             # Check if status is 2xx
             if resp.status // 100 != 2:
