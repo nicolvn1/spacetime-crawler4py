@@ -25,6 +25,7 @@ class Worker(Thread):
         self.freq = {}
         self.ics_subdomains = {}
         self.ics_subdomains_formatted = []
+        self.depth_dict = {}
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
         assert {getsource(scraper).find(req) for req in {"from urllib.request import", "import urllib.request"}} == {-1}, "Do not use urllib.request in scraper.py"
@@ -43,24 +44,7 @@ class Worker(Thread):
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
-            # Header checking
-            header = self.downloadHeader(tbd_url)
-            if header:
-                # check header for redirect
-                header_redirect = self.headerRedirect(tbd_url, header)
-                if not self.checkSameUrl(tbd_url, header_redirect):
-                    print(f"Header redirect to {header_redirect}")
-                    if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect)):
-                        self.frontier.add_url(header_redirect)
-                    self.frontier.mark_url_complete(tbd_url)
-                    time.sleep(self.config.time_delay)
-                    continue
-                # check header to see if the file is too big to download > 1mb
-                if not self.checkLengthHeader(header):
-                    print("File too big")
-                    self.frontier.mark_url_complete(tbd_url)
-                    time.sleep(self.config.time_delay)
-                    continue
+            
             # download the web
             resp = download(tbd_url, self.config, self.logger)
             # just in case the download fails
@@ -69,19 +53,49 @@ class Worker(Thread):
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
+            # if url already appeared 10 times, skip
+            '''if dict[resp.url] > 10:
+                print("Depth exceeded 10. Skipping."
+                fix'''
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
+            # Header checking
+            header = self.downloadHeader(tbd_url)
+            if header:
+                # Check header for redirect
+                header_redirect = self.headerRedirect(tbd_url, header)
+                while resp.status // 100 == 3:
+                    print(f"Header redirect to {header_redirect}")
+                    resp = download(header_redirect, self.config, self.logger)
+                    header = self.downloadHeader(resp)
+                    header_redirect = self.headerRedirect(resp, header)
+                '''if not self.checkSameUrl(tbd_url, header_redirect):
+                    print(f"Header redirect to {header_redirect}")
+                    if (scraper.is_valid(header_redirect) and not scraper.check_tribe_bar_date(tbd_url, header_redirect) and not scraper.is_crawled(header_redirect)):
+                        self.frontier.add_url(header_redirect)
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    continue'''
+                # check header to see if the file is too big to download > 1mb
+                if not self.checkLengthHeader(header):
+                    print("File too big")
+                    self.frontier.mark_url_complete(tbd_url)
+                    time.sleep(self.config.time_delay)
+                    continue
+                    
             # to print out result every 100 downloads
             self.counter += 1
             if self.counter == 100:
                 self.counter = 0
                 self.finalResults()
+            
             # Check if status is 2xx
             if resp.status // 100 != 2:
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
+                
             # try to soup it
             try:
                 soup = BeautifulSoup(resp.raw_response.content, 'html.parser', from_encoding = "iso-8859-1")
@@ -95,7 +109,7 @@ class Worker(Thread):
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
-            # check redirects 
+            '''# check redirects 
             redirect = self.checkRedirect(soup)
             if redirect and not self.checkSameUrl(redirect, tbd_url):
                 print(f"redirect to {redirect}")
@@ -103,12 +117,12 @@ class Worker(Thread):
                     self.frontier.add_url(redirect)
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
-                continue
+                continue'''
             # add to self data and calculate word count
-            word_count = self.cakcData(resp)
+            word_count = self.calcData(resp)
             # if less than 100 word, let's not scrap other links from it
             if word_count < 100:
-                print("file to small")
+                print("file too small")
                 self.frontier.mark_url_complete(tbd_url)
                 time.sleep(self.config.time_delay)
                 continue
@@ -153,6 +167,12 @@ class Worker(Thread):
             scraped_urls = scraper.scraper(tbd_url, resp)
             for scraped_url in scraped_urls:
                 self.frontier.add_url(scraped_url)
+            '''# record depth (number of times url appeared)
+            try:
+                self.depth_dict[resp.url] += 1
+            except KeyError:
+                self.depth_dict[resp.url] = 1'''
+            # mark url completed and wait before moving on to next    
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
         self.finalResults()
@@ -217,7 +237,7 @@ class Worker(Thread):
             else:
                 return redir
         else:
-            return url   
+            return url  
 
     def checkLengthHeader(self, head):
         # check the header to see if file too big
@@ -291,5 +311,4 @@ class Worker(Thread):
             header = requests.head(url, timeout=5)
             return header if header else None
         except Exception as e:
-            return None
-        
+            return None       
